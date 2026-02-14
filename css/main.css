@@ -564,10 +564,10 @@ sup > a::before,
 }
 #nprogress .bar {
   height: 3px !important;
-  background-color: #29d !important;
+  background-color: #5c170d !important;
 }
 #nprogress .peg {
-  box-shadow: 0 0 14px #29d, 0 0 8px #29d !important;
+  box-shadow: 0 0 14px #5c170d, 0 0 8px #5c170d !important;
 }
 @media (max-width: 575px) {
   #nprogress .bar {
@@ -841,8 +841,8 @@ i.iconfont {
   --sec-text-color: #718096;
   --post-text-color: #2c3e50;
   --post-heading-color: #1a202c;
-  --post-link-color: #0366d6;
-  --link-hover-color: #30a9de;
+  --post-link-color: #FAA18F;
+  --link-hover-color: #FAA18F;
   --link-hover-bg-color: #f8f9fa;
   --line-color: #eaecef;
   --navbar-bg-color: #5c170d;
@@ -872,7 +872,7 @@ i.iconfont {
     --link-hover-color: #30a9de;
     --link-hover-bg-color: #364151;
     --line-color: #435266;
-    --navbar-bg-color: #1f3144;
+    --navbar-bg-color: #5c170d;
     --navbar-text-color: #d0d0d0;
     --subtitle-color: #d0d0d0;
     --scrollbar-color: #687582;
@@ -910,7 +910,7 @@ i.iconfont {
     --link-hover-color: #30a9de;
     --link-hover-bg-color: #364151;
     --line-color: #435266;
-    --navbar-bg-color: #1f3144;
+    --navbar-bg-color: #5c170d;
     --navbar-text-color: #d0d0d0;
     --subtitle-color: #d0d0d0;
     --scrollbar-color: #687582;
