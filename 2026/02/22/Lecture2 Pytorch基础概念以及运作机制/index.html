@@ -1,0 +1,831 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#5c170d">
+  <meta name="author" content="yeye">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="0.模型训练计算question1 在1024个H100上用15T token训练一个70B的模型多久  计算训练需要的总浮点运算数：6 * 参数量 * token数量  question2 用8张H100，和AdamW可以训练的最大模型是多大（参数量）  H100 有80GB显存 参数量是总显存量除以每个参数需要的字节数 这里算的比较简略，没有考虑激活值（取决于batchsize和sequenc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CS336 Lecture 2 - Pytorch基础概念以及运作机制">
+<meta property="og:url" content="https://xyyyde.github.io/2026/02/22/Lecture2%20Pytorch%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5%E4%BB%A5%E5%8F%8A%E8%BF%90%E4%BD%9C%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="Yeyangyi Xiang的博客">
+<meta property="og:description" content="0.模型训练计算question1 在1024个H100上用15T token训练一个70B的模型多久  计算训练需要的总浮点运算数：6 * 参数量 * token数量  question2 用8张H100，和AdamW可以训练的最大模型是多大（参数量）  H100 有80GB显存 参数量是总显存量除以每个参数需要的字节数 这里算的比较简略，没有考虑激活值（取决于batchsize和sequenc">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216124423.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216124339.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216124944.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216125701.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216125845.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216131435.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216132653.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216132939.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216133119.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216131948.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216132313.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216133900.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216135100.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216145023.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216145004.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216144941.png">
+<meta property="og:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216145040.png">
+<meta property="article:published_time" content="2026-02-21T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-02-21T16:52:35.599Z">
+<meta property="article:author" content="yeye">
+<meta property="article:tag" content="CS336">
+<meta property="article:tag" content="PyTorch">
+<meta property="article:tag" content="深度学习">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://xyyyde.github.io/img/lecture2_pytorch/Pasted%20image%2020260216124423.png">
+  
+  
+  
+  <title>CS336 Lecture 2 - Pytorch基础概念以及运作机制 - Yeyangyi Xiang的博客</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"xyyyde.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#5c170d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":false,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2025-12-19T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+  
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Yeye的博客</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page2.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="CS336 Lecture 2 - Pytorch基础概念以及运作机制"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-02-22 00:00" pubdate>
+          2026年2月22日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          19 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">CS336 Lecture 2 - Pytorch基础概念以及运作机制</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="0-模型训练计算"><a href="#0-模型训练计算" class="headerlink" title="0.模型训练计算"></a>0.模型训练计算</h3><p>question1 在1024个H100上用15T token训练一个70B的模型多久</p>
+<ul>
+<li>计算训练需要的总浮点运算数：6 * 参数量 * token数量<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216124423.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+</ul>
+<p>question2 用8张H100，和AdamW可以训练的最大模型是多大（参数量）</p>
+<ul>
+<li>H100 有80GB显存</li>
+<li>参数量是总显存量除以每个参数需要的字节数</li>
+<li>这里算的比较简略，没有考虑激活值（取决于batchsize和sequence length）<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216124339.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+</ul>
+<h3 id="1-Memory-accounting"><a href="#1-Memory-accounting" class="headerlink" title="1.Memory accounting"></a>1.Memory accounting</h3><h4 id="1-1-tensors-basics"><a href="#1-1-tensors-basics" class="headerlink" title="1.1 tensors_basics"></a>1.1 tensors_basics</h4><p>创建张量并初始化<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216124944.png" srcset="/img/loading.gif" lazyload alt="图片"><br>也可以不初始化值，后续进行一些逻辑操作<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216125701.png" srcset="/img/loading.gif" lazyload alt="图片"><br>张量都是浮点数，有不同的表达</p>
+<ul>
+<li>float32（全精度，FP32，单精度）（实际上有还有更大的，float64，但是一般dl都使用float32就够了）<ul>
+<li>一位用于正负占位</li>
+<li>8个bit用于指数</li>
+<li>23个bit用于尾数<br>   <img src="/img/lecture2_pytorch/Pasted%20image%2020260216125845.png" srcset="/img/loading.gif" lazyload alt="图片"><br>  例子<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216131435.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+</ul>
+</li>
+<li>float16（半精度，FP16）能表示的数的范围比较小，容易上溢（数值太大超出表示范围）和下溢（数值太小超出表示范围），只适合训练小模型<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216132653.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+<li>bfloat16（BF16） 用来进行计算。但是存储优化器和参数还是要用FP32，不让不太稳定<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216132939.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+<li>fp8 两种变体<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216133119.png" srcset="/img/loading.gif" lazyload alt="图片"><br>&#x3D;&#x3D;总结&#x3D;&#x3D;</li>
+<li>一般训练会使用FP32，但是需要的内存比较多</li>
+<li>使用FP8、FP16甚至BF16（一般比较少）有风险，不稳定</li>
+<li>可以使用混合精度训练，比如在简单的设计矩阵乘法的向前传播使用BF16，其它情况使用FP32是可以的。（提取出来，转化成BF16计算，然后转换回去，还有梯度缩放之类的）</li>
+</ul>
+<h4 id="1-2-memory-usage-of-tensor"><a href="#1-2-memory-usage-of-tensor" class="headerlink" title="1.2 memory usage of tensor"></a>1.2 memory usage of tensor</h4><p>内存用量&#x3D; 张量元素个数 *  每个元素大小（32位，4bytes,这里用FP32进行计算）<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216131948.png" srcset="/img/loading.gif" lazyload alt="图片"><br>GPT3的前馈层（有四倍隐藏维度，维度是12288）<br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216132313.png" srcset="/img/loading.gif" lazyload alt="图片"></p>
+<h3 id="2-Compute-accounting"><a href="#2-Compute-accounting" class="headerlink" title="2.Compute accounting"></a>2.Compute accounting</h3><h4 id="2-1-tensors-on-gpus"><a href="#2-1-tensors-on-gpus" class="headerlink" title="2.1 tensors on gpus"></a>2.1 tensors on gpus</h4><p>tensors默认存储在CPU里面，这时候计算速度非常慢。<br><code>x = toch.zero(32,32)</code><br>所以需要转移到GPU里面<br><code>y = x.to(&quot;cuda:0&quot;)</code><br>也可以直接在GPU里面创建tensors<br><code>z = torch.zeros(32, 32, device=&quot;cuda:0&quot;)</code><br>计算使用的显存<br><code>new_memory_allocated = torch.cuda.memory_allocated() # @inspect new_memory_allocated</code><br><code>memory_used = new_memory_allocated - memory_allocated # @inspect memory_used</code><br><code>assert memory_used == 2 * (32 * 32 * 4) # 2 32x32 matrices of 4-byte floats</code></p>
+<p><img src="/img/lecture2_pytorch/Pasted%20image%2020260216133900.png" srcset="/img/loading.gif" lazyload alt="图片"></p>
+<h4 id="2-2-tensor-operations"><a href="#2-2-tensor-operations" class="headerlink" title="2.2 tensor_operations"></a>2.2 tensor_operations</h4><p><strong>PyTorch tensors are pointers into allocated memory</strong><br>用不同的strides来定位具体的元素<br><code>x.stride(0) == 4</code><br><code>x.stride(1) == 1</code><br>定位到6<br><code>r, c = 1, 2</code><br><code>index = r * x.stride(0) + c * x.stride(1) # @inspect index</code><br><code>assert index == 6</code><br><img src="/img/lecture2_pytorch/Pasted%20image%2020260216135100.png" srcset="/img/loading.gif" lazyload alt="图片"><br>很多时候进行操作查看实际上是另一个视图而没有发生改变<br>如果说y是x的第一列，x和y实际上是一片存储空间，没有发生复制<br>如果转置后，变得不连续了，如果想变连续就会产生复制 contiguouos&#x2F;reshape（可能产生新空间）</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs python">x = torch.tensor([[<span class="hljs-number">1</span>,<span class="hljs-number">2</span>],[<span class="hljs-number">3</span>,<span class="hljs-number">4</span>]]) <br>x_t = x.t() <span class="hljs-comment"># 转置后不连续 </span><br><span class="hljs-built_in">print</span>(x_t.is_contiguous()) <span class="hljs-comment"># 输出: False</span><br>x_t_contig = x_t.contiguous() <span class="hljs-comment"># 复制内存，重新排列元素 </span><br><span class="hljs-built_in">print</span>(x_t_contig.is_contiguous()) <span class="hljs-comment"># 输出: True </span><br><span class="hljs-built_in">print</span>(x_t_contig.storage()) <span class="hljs-comment"># 内存存储变为 [1,3,2,4]（按转置后的形状重新排列）</span><br><br>x = torch.tensor([[<span class="hljs-number">1</span>,<span class="hljs-number">2</span>],[<span class="hljs-number">3</span>,<span class="hljs-number">4</span>]]) x_t = x.t() <span class="hljs-comment"># 不连续 </span><br>x_t_reshaped = x_t.reshape(<span class="hljs-number">4</span>) <span class="hljs-comment"># 会先复制内存 </span><br><span class="hljs-comment"># 验证：修改reshape后的张量，原张量不变（说明是复制） </span><br>x_t_reshaped[<span class="hljs-number">0</span>] = <span class="hljs-number">100</span> <br><span class="hljs-built_in">print</span>(x_t) <span class="hljs-comment"># 输出: tensor([[1, 3], [2, 4]])（原张量未变） </span><br><span class="hljs-built_in">print</span>(x_t_reshaped) <span class="hljs-comment"># 输出: tensor([100, 3, 2, 4])</span><br></code></pre></td></tr></table></figure>
+<p><strong>矩阵乘法</strong><br>	dl里面每个batch 每个sequence 对里面的每个token都做矩阵乘法</p>
+<h4 id="2-3-tensor-einops"><a href="#2-3-tensor-einops" class="headerlink" title="2.3 tensor_einops"></a>2.3 tensor_einops</h4><ul>
+<li><strong>jaxtyping</strong>：给张量维度做<strong>命名标注</strong>（如 <code>batch seq heads hidden</code>），代替纯数字 &#x2F; 注释，让维度含义一眼看懂，只是文档式说明，不强制校验。<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216145023.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+<li><strong>einops</strong>：一套统一、直观的张量操作库，替代易出错的 <code>reshape、transpose、dim=-1</code>：<ul>
+<li><strong>einsum</strong>：用维度名写矩阵乘 &#x2F; 点积，不用转置，自动对重复维度求和，<code>...</code> 可通配任意前面维度；<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216145004.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+<li><strong>reduce</strong>：按名字对维度做 sum&#x2F;mean&#x2F;max 等聚合，不用记索引；<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216144941.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+<li><strong>rearrange</strong>：用括号轻松<strong>拆分 &#x2F; 合并维度</strong>（如把 <code>(heads hidden)</code> 拆成两个维度），完全替代复杂的 reshape + transpose<br>  <img src="/img/lecture2_pytorch/Pasted%20image%2020260216145040.png" srcset="/img/loading.gif" lazyload alt="图片"></li>
+</ul>
+</li>
+</ul>
+<h4 id="2-4-tensor-operations-flops"><a href="#2-4-tensor-operations-flops" class="headerlink" title="2.4 tensor_operations_flops"></a>2.4 tensor_operations_flops</h4><ul>
+<li><strong>FLOPs 浮点数运算次数：</strong><br>  两个矩阵相乘的时候：<br><code>x = torch.ones(B, D, device=device)</code><br><code>w = torch.randn(D, K, device=device)</code><br><code>y = x @ w</code><br><code>actual_num_flops = 2 * B * D * K</code><br>  最种输出的是B * K个数字，对每个数字，实际上就是i,j位置 j,k位置相乘了D次，然后相加了D-1次，工程上近似2D<br>  乘法最耗时，其它基础操作基本上是和矩阵大小（m * n）线性相关的</li>
+<li><strong>FLOP&#x2F;s浮点数运算速度</strong></li>
+<li><strong>MFU</strong>（model FLOPs utilization）：实际的FLOPs&#x2F;承诺的FLOPs       &gt;&#x3D;0.5比较好  衡量硬件能效</li>
+</ul>
+<h4 id="2-5-Gradients-basics-and-flops-梯度"><a href="#2-5-Gradients-basics-and-flops-梯度" class="headerlink" title="2.5 Gradients_basics and flops 梯度"></a>2.5 Gradients_basics and flops 梯度</h4><p><a target="_blank" rel="noopener" href="https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4">https://medium.com/@dzmitrybahdanau/the-flops-calculus-of-language-model-training-3b19c1f025e4</a><br>一个动图（参考一下）</p>
+<ul>
+<li>向前传播 2倍datapoints * prameters</li>
+<li>反向传播 4倍datapoints * prameters（链式求导）</li>
+<li>总和 是6倍<br>  （ <strong>datapoints</strong>：对应之前的 <code>B</code>（batch size，批次样本数）；<br>   <strong>parameters</strong>：对应之前的 <code>D×K</code>（全连接层的参数总数，输入维度 D × 输出维度 K）；</li>
+</ul>
+<h3 id="3-Models"><a href="#3-Models" class="headerlink" title="3.Models"></a>3.Models</h3><h4 id="3-1-Parameter-initialization"><a href="#3-1-Parameter-initialization" class="headerlink" title="3.1 Parameter initialization"></a>3.1 Parameter initialization</h4><p>数值增长量级本质上和隐藏维度平方根成正比，大模型容易数值发散，不稳定<br>所以需要保证不容易爆炸，进行缩放<br><code>w = nn.Parameter(torch.randn(input_dim, output_dim) / np.sqrt(input_dim))</code><br>得到一个在（0,1)分布附近的数字。 Xavier initialization</p>
+<h4 id="3-2-custom-model"><a href="#3-2-custom-model" class="headerlink" title="3.2 custom model"></a>3.2 custom model</h4><p>自定义模型，有一个矩阵层</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">assert</span> param_sizes == [<br><br>(<span class="hljs-string">&quot;layers.0.weight&quot;</span>, D * D),<br><br>(<span class="hljs-string">&quot;layers.1.weight&quot;</span>, D * D),<br><br>(<span class="hljs-string">&quot;final.weight&quot;</span>, D),<br><br>]<br><br>num_parameters = get_num_parameters(model)<br><br><span class="hljs-keyword">assert</span> num_parameters == (D * D) + (D * D) + D<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li>关于随机性<ul>
+<li>影响因素 ：初始化，dropout，数据排序，某些best practice</li>
+<li>传播固定的seeds，便于重现，位不同随机来源设置不同的种子</li>
+<li>让模型具有确定性比较好。<code>random.seed(seed)</code></li>
+</ul>
+</li>
+</ul>
+<h4 id="3-3-data-loading"><a href="#3-3-data-loading" class="headerlink" title="3.3 data loading"></a>3.3 data loading</h4><ul>
+<li>data是一串有tokenizer输出的数字序列</li>
+<li>分次加载到memory里面，使用memmap按需加载文件，分批采样加载数据</li>
+</ul>
+<h4 id="3-4-optimizer（优化器）"><a href="#3-4-optimizer（优化器）" class="headerlink" title="3.4 optimizer（优化器）"></a>3.4 optimizer（优化器）</h4><p>不同优化器</p>
+<ul>
+<li>AdaGrad 随机梯度下降<ul>
+<li>momentum &#x3D; SGD + exponential averaging of grad 根据滑动平均值而不是瞬时平均值来更新</li>
+<li>AdaGrad &#x3D; SGD + averaging by grad^2 根据历史梯度平方的平均值来缩放梯度</li>
+<li>RMSProp &#x3D; AdaGrad + exponentially averaging of grad^2 指数滑动平方</li>
+<li>Adam &#x3D; RMSProp + momentum 同时维护滑动平均值和梯度滑动平方平均值</li>
+</ul>
+</li>
+<li>Adagrad的实现（override优化器类来实现）<a target="_blank" rel="noopener" href="https://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf">https://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf</a><ol>
+<li><strong>准备数据</strong>：生成随机输入张量<code>x</code>和目标值张量<code>y</code>，并指定运行设备（CPU&#x2F;GPU）；</li>
+<li><strong>前向传播</strong>：将输入<code>x</code>传入模型<code>model</code>得到预测值<code>pred_y</code>；</li>
+<li><strong>计算损失</strong>：用均方误差（MSE）计算预测值与目标值的损失<code>loss</code>；</li>
+<li><strong>反向传播</strong>：通过<code>loss.backward()</code>计算模型参数的梯度；</li>
+<li><strong>参数更新</strong>：调用<code>optimizer.step()</code>根据梯度更新模型参数；</li>
+<li><strong>保存状态</strong>：提取并保存更新后的模型参数（<code>state_dict</code>）；</li>
+<li><strong>清空梯度</strong>：可选操作，用<code>optimizer.zero_grad()</code>清空梯度缓存（<code>set_to_none=True</code>更节省内存）。</li>
+</ol>
+  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">step</span>(<span class="hljs-params">self</span>):<br><br><span class="hljs-keyword">for</span> group <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>.param_groups:<br>	lr = group[<span class="hljs-string">&quot;lr&quot;</span>]<br>	<span class="hljs-keyword">for</span> p <span class="hljs-keyword">in</span> group[<span class="hljs-string">&quot;params&quot;</span>]:<br>		<span class="hljs-comment"># Optimizer state</span><br>		state = <span class="hljs-variable language_">self</span>.state[p]<br>		grad = p.grad.data<br>		<span class="hljs-comment"># Get squared gradients g2 = sum_&#123;i&lt;t&#125; g_i^2</span><br>		g2 = state.get(<span class="hljs-string">&quot;g2&quot;</span>, torch.zeros_like(grad))<br>		<span class="hljs-comment"># Update optimizer state</span><br>		g2 += torch.square(grad)<br>		state[<span class="hljs-string">&quot;g2&quot;</span>] = g2<br>		<span class="hljs-comment"># Update parameters</span><br>		p.data -= lr * grad / torch.sqrt(g2 + <span class="hljs-number">1e-5</span>)<br></code></pre></td></tr></table></figure>
+<ol>
+<li><strong>遍历参数组与参数</strong>：外层循环遍历优化器的参数组（<code>param_groups</code>）获取学习率（<code>lr</code>），内层循环遍历每组中的模型参数（<code>params</code>）。</li>
+<li><strong>初始化 &#x2F; 获取累计梯度平方</strong>：从参数的状态字典（<code>state</code>）中读取累计平方梯度<code>g2</code>，若不存在则初始化为与梯度同形状的零张量。</li>
+<li><strong>更新累计梯度平方</strong>：将当前梯度的平方值累加到<code>g2</code>中，并更新回状态字典保存。</li>
+<li><strong>更新模型参数</strong>：按照 Adagrad 公式更新参数，核心计算为<code>参数 = 参数 - 学习率 × 当前梯度 / (累计梯度平方和的平方根 + 极小值1e-5)</code>，其中<code>1e-5</code>用于避免分母为零。</li>
+</ol>
+</li>
+<li>Memory 优化器的内存需求</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs Python"><span class="hljs-comment"># Parameters</span><br>num_parameters = (D * D * num_layers) + D <span class="hljs-comment"># @inspect num_parameters</span><br><span class="hljs-keyword">assert</span> num_parameters == get_num_parameters(model)<br><span class="hljs-comment"># Activations</span><br>num_activations = B * D * num_layers <span class="hljs-comment"># @inspect num_activations</span><br><span class="hljs-comment"># Gradients</span><br>num_gradients = num_parameters <span class="hljs-comment"># @inspect num_gradients</span><br><span class="hljs-comment"># Optimizer states</span><br>num_optimizer_states = num_parameters <span class="hljs-comment"># @inspect num_optimizer_states</span><br><span class="hljs-comment"># Putting it all together, assuming float32</span><br>total_memory = <span class="hljs-number">4</span> * (num_parameters + num_activations + num_gradients + num_optimizer_states) <span class="hljs-comment"># @inspect total_memory</span><br></code></pre></td></tr></table></figure>
+<pre><code class="hljs">	1. 参数在显存中（矩阵参数量*层数+ D 是 bias 或 embedding 的小项。）
+	2. forward 产生激活（存储每一层 forward产生的中间 hidden state后面求导要用，）
+		a) B = batch size（或者 tokens per batch)
+		b) D = hidden dim
+		c) L = layers
+	3. backward 产生梯度（梯度本来就是对每个参数求导）
+	4. optimizer 用动量更新（看情况这里简约了）
+	5. float32，4个字节
+</code></pre>
+<h4 id="3-5-其它"><a href="#3-5-其它" class="headerlink" title="3.5 其它"></a>3.5 其它</h4><ul>
+<li>激活值不一定要全部存储，在 backward 时可以通过重新 forward 计算恢复，有些激活值不能重新算（dropout这种有随机性的）</li>
+<li>激活点检查：在 forward 阶段监控每一层输出值的数值分布，防止数值爆炸或塌缩影响梯度与优化稳定性。</li>
+<li>checkpoint保存：训练过程中定期保存模型和优化器和迭代步数等，防止突然中断失去数据</li>
+<li>训练的时候使用混合精度训练，可以在第五个forward用低一点的精度，训练其实对精度要求比较高，推理的时候可以通过量化模型来提升性能</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%AF%BE%E7%A8%8B%E7%AC%94%E8%AE%B0/" class="category-chain-item">课程笔记</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/CS336/" class="print-no-link">#CS336</a>
+      
+        <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" class="print-no-link">#深度学习</a>
+      
+        <a href="/tags/PyTorch/" class="print-no-link">#PyTorch</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>CS336 Lecture 2 - Pytorch基础概念以及运作机制</div>
+      <div>https://xyyyde.github.io/2026/02/22/Lecture2 Pytorch基础概念以及运作机制/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>yeye</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年2月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/02/14/CS336-Lecture1/" title="CS336 Lecture 1 - 课程概要与tokenization历程">
+                        <span class="hidden-mobile">CS336 Lecture 1 - 课程概要与tokenization历程</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+    <div id="giscus" class="giscus"></div>
+    <script type="text/javascript">
+      Fluid.utils.loadComments('#giscus', function() {
+        var options = {"repo":"xyyyde/xyyyde.github.io","repo-id":"R_kgDOQrbSGQ","category":"General","category-id":"DIC_kwDOQrbSGc4C0AA5","theme-light":"light","theme-dark":"dark","mapping":"pathname","reactions-enabled":1,"emit-metadata":0,"input-position":"bottom","lang":"zh-CN"};
+        var attributes = {};
+        for (let option in options) {
+          if (!option.startsWith('theme-')) {
+            var key = option.startsWith('data-') ? option : 'data-' + option;
+            attributes[key] = options[option];
+          }
+        }
+        var light = 'light';
+        var dark = 'dark';
+        window.GiscusThemeLight = light;
+        window.GiscusThemeDark = dark;
+        attributes['data-theme'] = document.documentElement.getAttribute('data-user-color-scheme') === 'dark' ? dark : light;
+        for (let attribute in attributes) {
+          var value = attributes[attribute];
+          if (value === undefined || value === null || value === '') {
+            delete attributes[attribute];
+          }
+        }
+        var s = document.createElement('script');
+        s.setAttribute('src', 'https://giscus.app/client.js');
+        s.setAttribute('crossorigin', 'anonymous');
+        for (let attribute in attributes) {
+          s.setAttribute(attribute, attributes[attribute]);
+        }
+        var ss = document.getElementsByTagName('script');
+        var e = ss.length > 0 ? ss[ss.length - 1] : document.head || document.documentElement;
+        e.parentNode.insertBefore(s, e.nextSibling);
+      });
+    </script>
+    <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
